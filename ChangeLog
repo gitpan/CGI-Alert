@@ -1,3 +1,15 @@
+2003-11-07  Eduardo Santiago <esm@pobox.com>
+	* Release 1.02
+
+2003-10-02  Eduardo Santiago <esm@pobox.com>
+
+	* Alert.pm: new functionality: if called with 'hide=qr/xxx/'
+	  on the import line, exclude CGI params matching /xxx/ from
+	  generated email.  Used to avoid sending sensitive info
+	  (passwords, credit card numbers) over unencrypted email.
+
+	* t/02hide.t: new test, for above functionality
+
 2003-07-31  Eduardo Santiago  <esm@pobox.com>
 
 	* Release 1.00

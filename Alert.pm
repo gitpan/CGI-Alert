@@ -2,12 +2,13 @@
 #
 # CGI::Alert.pm  -  notify a human about errors/warnings in CGI scripts
 #
-# $Id: Alert.pm,v 1.18 2003/07/31 14:40:45 esm Exp $
+# $Id: Alert.pm,v 1.21 2003/11/07 21:24:06 esm Exp $
 #
 package CGI::Alert;
 
 use strict;
 use warnings;
+use Carp;
 
 ###############################################################################
 # BEGIN user-configurable section
@@ -19,6 +20,10 @@ our $Emit_HTTP_Headers = 0;
 # clever about stat'ing the calling script and finding the owner, but
 # why go to so much effort?
 our $Maintainer = 'webmaster';
+
+# Expressions to filter from the email.  We don't want to send passwords,
+# credit card numbers, or other sensitive info out via email.
+our @Hide = (qr/[\b_-]passw/i);
 
 # For stack trace: names of the fields returned by caller(), in order.
 our @Caller_Fields =
@@ -54,7 +59,7 @@ our $DEBUG_SENDMAIL = '';
 our $ME = $ENV{REQUEST_URI} || $0 || "<???>";
 
 # RCS ID, on one line for MakeMaker
-our $VERSION = '1.00';
+our $VERSION = '1.02';
 
 ############
 #  import  #  If called with "use CGI::Alert 'foo@bar'", send mail to foo@bar
@@ -65,6 +70,26 @@ sub import {
 	# Is it a valid exported function?  Skip.
 	if (exists &{$_[$i]}) {
 	    $i++
+	}
+	elsif ($_[$i] =~ m!^-{0,2}hide=(.+)$!) {	# RE to filter out?
+	    my $hide = $1;		# Our input
+	    my $re;			# ...how we interpret it
+	    if    ($hide =~ m!^/(.*)/$!)		{ $re= "qr/$1/"      }
+	    elsif ($hide =~ m!^m(.)(.*)\1$!)		{ $re= "qr/$2/"      }
+	    elsif ($hide =~ m!^(qr(.)(.*)\2[ismx]*)$!)	{ $re= $1	      }
+	    else					{ $re= "qr/$hide/" }
+
+	    # Make sure it can be parsed as a regex.
+	    my $result = eval $re;
+	    if ($@) {
+		carp "Ignoring invalid filter expression '$re': $@";
+	    }
+	    else {
+		push @Hide, $result;
+	    }
+
+	    # Eliminate it from our import list
+	    splice @_, $i, 1;
 	}
 	else {
 	    # Anything else: must be an email address.  Point $Mainainer at it,
@@ -354,8 +379,8 @@ Content-Description: CGI Parameters ($method)
 	    foreach my $set (@cgi_params) {
 		my ($p, @v) = @$set;
 
-		# For security purposes, never send out passwords.
-		$p =~ /[\b_-]passw/i
+		# For security purposes, never send out passwords, credit cards
+		grep { $p =~ /$_/ } @Hide
 		  and @v = ('[...]');
 
 		printf SENDMAIL "  %-*s = %s\n", $maxlen, $p, $v[0] || "";
@@ -617,6 +642,31 @@ include it in the import list:
 or, more typically:
 
     use CGI::Alert 'esm';   # where 'esm' is a local account
+
+=head2	Hiding Sensitive Data
+
+Forms often contain sensitive data: passwords, credit card numbers,
+next Tuesday's winning Lotto numbers.  CGI::Alert sends unencrypted
+email, and you don't want these values being intercepted.
+
+To exclude CGI parameters from the list sent by email, use
+the B<hide=qr/.../> keyword on the import line:
+
+    use CGI::Alert 'esm', 'hide=qr/credit/i';
+
+If CGI::Alert encounters any parameter matching the given regex, it
+substitutes B<[...]> (bracket, ellipsis, bracket) for its value:
+
+    card_type       = Visa
+    card_name       = Joe Bob
+    credit_card_num = [...]
+
+Multiple expressions are allowed, but must be specified
+using one B<hide=> for each:
+
+    use CGI::Alert 'esm', 'hide=qr/credit/i', 'hide=qr/passphrase/';
+
+The default exclusion list is B<qr/[\b_-]passw/i>
 
 =head2	Running under tilde URLs
 
