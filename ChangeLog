@@ -1,3 +1,37 @@
+2004-12-13  Eduardo Santiago  <esm@ascend.gingerbear.org>
+
+	* Release 1.08
+
+	* Alert.pm:
+	  Bug 8033 - check $^S properly.  Again, thanks to Don At
+	  See-Pan Dot Org for finding this and providing a patch.
+
+	* Alert.pm: PHEW!  Finally!  Configurable user output.  The
+	  message shown to the remote (web) user is now configurable.
+	  Feature Request 7788.  Thanks to Don At See-Pan Dot Org for
+	  the idea.
+
+2004-10-11  Eduardo Santiago  <esm@ascend.gingerbear.org>
+
+	* Alert.pm:
+	  Eek!  @Hide is wrong: it won't detect a simple name like 'password'
+	  (that is, if it starts with 'passw' instead of being 'mumble-passw').
+
+2004-06-10  Eduardo Santiago  <esm@ascend.gingerbear.org>
+
+	* Alert.pm:
+	  when displaying CGI params, only default to '' if param is undef!
+	  Otherwise, we show zero (0) as ''.
+
+2004-03-09  Eduardo Santiago  <esm@ascend.gingerbear.org>
+
+	* Alert.pm:
+	  $http_host - split into two: a _full_ portion, and an
+	  _email hostname_ one.  The difference is that the full one
+	  might have colon-port (:80, :8080, ...).  That's important
+	  for showing the full URL in the subject line, but a major
+	  bad thing to say "From: <nobody@foo.com:80>".
+
 2004-03-06  Eduardo Santiago <esm@pobox.com>
 	* Release 1.05
 

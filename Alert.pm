@@ -2,7 +2,7 @@
 #
 # CGI::Alert.pm  -  notify a human about errors/warnings in CGI scripts
 #
-# $Id: Alert.pm,v 1.25 2004/03/05 21:39:04 esm Exp $
+# $Id: Alert.pm,v 1.31 2004/12/13 22:59:44 esm Exp $
 #
 package CGI::Alert;
 
@@ -27,7 +27,27 @@ our $Maintainer = 'webmaster';
 
 # Expressions to filter from the email.  We don't want to send passwords,
 # credit card numbers, or other sensitive info out via email.
-our @Hide = (qr/[\b_-]passw/i);
+our @Hide = (qr/(^|[\b_-])passw/i);
+
+# Default text shown to the remote (web) user if we die.  This tells
+# the user that something went wrong, but that a responsible party
+# has been informed.
+our $Browser_Text = <<'-';
+<h1><font color="red">Uh-Oh!</font></h1>
+<p>
+The script which was handling your request died, with the following error:
+</p>
+<pre>
+    [MSG]
+</pre>
+<p>
+If that indicates a problem which you can fix, please do so.
+</p>
+<p>
+Otherwise, don't panic: I have sent a notification to the
+[MAINTAINER], providing details of the error.
+</p>
+-
 
 # For stack trace: names of the fields returned by caller(), in order.
 our @Caller_Fields =
@@ -67,7 +87,7 @@ our @EXPORT_OK   = qw(http_die);
 our $ME = $ENV{REQUEST_URI} || $0 || "<???>";
 
 # RCS ID, on one line for MakeMaker
-our $VERSION = '1.05';
+our $VERSION = '1.08';
 
 ############
 #  import  #  If called with "use CGI::Alert 'foo@bar'", send mail to foo@bar
@@ -285,7 +305,14 @@ sub notify($@) {
 	      exit 1;
 	  };
 
-	my $http_host   = $env{HTTP_HOST}   || "localhost";
+	my $http_host_full = 'localhost';
+	my $at_http_host   = '';
+	if (($env{HTTP_HOST}||'') =~ m!^(([\w\d.-]+)(:\d+)?)$!) {
+	    # FIXME: for email host, remove the ':80'.
+	    $http_host_full = $1;
+	    $at_http_host   = '@' . $2;
+	}
+
 	my $request_uri = $env{REQUEST_URI} || "/unknown-url";
 
 	my $package = __PACKAGE__;	# Can't string-interpolate __PACKAGE__
@@ -299,9 +326,9 @@ sub notify($@) {
 	$cgi_script .= " v$main::VERSION"	if defined $main::VERSION;
 
 	print  SENDMAIL <<"-";
-From:    CGI Alert <nobody\@$http_host>
+From:    CGI Alert <nobody$at_http_host>
 To:      $Maintainer
-Subject: $subject in http://$http_host$request_uri
+Subject: $subject in http://$http_host_full$request_uri
 X-mailer: $cgi_script, via $package v$VERSION
 Precedence: bulk
 MIME-Version: 1.0
@@ -392,7 +419,8 @@ Content-Description: CGI Parameters ($method)
 		grep { $p =~ /$_/ } @Hide
 		  and @v = ('[...]');
 
-		printf SENDMAIL "  %-*s = %s\n", $maxlen, $p, $v[0] || "";
+		printf SENDMAIL "  %-*s = %s\n", $maxlen, $p,
+		  (defined($v[0]) ? $v[0] : '');
 		# If this param is an array of more than one value, show all.
 		for (my $i=1; $i < @v; $i++) {
 		    printf SENDMAIL "  %-*s + %s\n", $maxlen, "", $v[$i];
@@ -576,7 +604,8 @@ sub _die($) {
     my $msg = shift;
 
     # Called inside an eval?  Pass it on.  This lets caller do things safely.
-    die $msg if $^S;
+    die $msg if $^S or not defined $^S;
+
 
     # Not an eval: die for real.
 
@@ -584,31 +613,42 @@ sub _die($) {
     printf STDERR "[%s - %s]: DIED: %s\n", $ME, scalar localtime, $msg
       unless $DEBUG_SENDMAIL;
 
-    #
-    # Display error message to remote (web) user.
-    #
+    # Next, display an error message to remote (web) user.  Do this before
+    # sending out the email: simple print()s are less likely to fail than
+    # a complex notify(), and we want to make a good attempt at presenting
+    # the remote user with a friendly diagnostic.
+    my $browser_text_copy;
+    if ($Browser_Text) {
+	# If caller has asked us to emit HTTP headers, do so now.
+	if ($Emit_HTTP_Headers && !$DEBUG_SENDMAIL) {
+	    print  "Status: 500 Server Error\n",
+	           "Content-type: text/html; charset=ISO-8859-1\n",
+		   "\n";
+	}
 
-    # If caller has asked us to emit HTTP headers, do so now.
-    if ($Emit_HTTP_Headers && !$DEBUG_SENDMAIL) {
-	print  "Status: 500 Server Error\n",
-               "Content-type: text/html; charset=ISO-8859-1\n",
-               "\n";
+	my $what = ref($Browser_Text) || '';
+
+	if ($what eq 'CODE') {
+	    # $Browser_Text is a subroutine
+	    eval { $Browser_Text->($msg, $Emit_HTTP_Headers); };
+	    # FIXME FIXME FIXME - now what?
+	}
+	elsif (!$what) {
+	    # $Browser_Text is simple text
+	    ($browser_text_copy = $Browser_Text) =~ s/\[MSG\]/$msg/g;
+	    $browser_text_copy =~ s/\[MAINTAINER\]/maintainer/ge;
+
+	    print $browser_text_copy		unless $DEBUG_SENDMAIL;
+	}
+	else {
+	    # Not a CODE ref or string
+	    push @warnings, "[Yo!  What is \$Browser_Text?  It's '$what', and I only grok 'CODE' or '' (strings)]";
+	}
+    }
+    else {
+	# $Browser_Text undefined - I guess we just show nothing to user?
     }
 
-    # FIXME-someday: if inside a <table>, some browsers might not render this.
-    # FIXME: do we want to escapeHTML($msg) ?
-    print  <<EOP unless $DEBUG_SENDMAIL;
-<h1><font color="red">Uh-Oh!</font></h1>
-<p>
-The script which was handling your request died, with the following error:
-<p>
-<pre>
-    $msg
-</pre>
-<p>
-If that indicates a problem which you can fix, please do so.
-<p>
-EOP
 
     # Generate a message body for the email we're going to send out
     my @text = ("The script died with:",
@@ -623,17 +663,7 @@ EOP
     }
 
     # Send out email.  Inform web user about our emailing efforts.
-    if (notify("FATAL ERRORS", @text)) {
-	printf <<'-', maintainer		unless $DEBUG_SENDMAIL;
-Otherwise, please send a note to the %s asking him/her to take a look.
-I tried to send out a notification, but was unable to do so.
--
-    } else {
-	printf <<'-', maintainer		unless $DEBUG_SENDMAIL;
-Otherwise, don't panic: I have sent a notification to the %s,
-providing details of the error.
--
-    }
+    notify("FATAL ERRORS", @text);
 
     printf <<EOP, __PACKAGE__			unless $DEBUG_SENDMAIL;
 <hr>
@@ -663,6 +693,15 @@ sub emit_http_headers($) {
 sub extra_html_headers(@) {
     @Extra_HTML_Headers = @_;
 }
+
+
+#########################
+#  custom_browser_text  #  Caller can give us a custom text to display
+#########################
+sub custom_browser_text($) {
+    $Browser_Text = shift;
+}
+
 
 # END   caller-accessible functions (not yet exported)
 ###############################################################################
@@ -760,7 +799,7 @@ using one B<hide=> for each:
 
     use CGI::Alert 'esm', 'hide=qr/credit/i', 'hide=qr/passphrase/';
 
-The default exclusion list is B<qr/[\b_-]passw/i>
+The default exclusion list is B<qr/(^|[\b_-])passw/i>
 
 =head2	Running under tilde URLs
 
@@ -878,6 +917,66 @@ can pass extra arguments to start_html via B<extra_html_headers()> :
     # If we ever call http_die(), make it use the above
     CGI::Alert::extra_html_headers( @Common_Headers );
 
+=head2	Custom Browser Text
+
+In the event of a die(), CGI::Alert will display the following
+message to the remote (browser) user:
+
+  <h1><font color="red">Uh-Oh!</font></h1>
+  <p>
+  The script which was handling your request died, with the following error:
+  </p>
+  <pre>
+      [MSG]
+  </pre>
+  <p>
+  If that indicates a problem which you can fix, please do so.
+  </p>
+
+...where C<[MSG]> gets replaced with the error from C<die>().
+
+Use B<CGI::Alert::custom_browser_text> to customize the text message
+displayed to the remote user (the browser).  The simple way is to
+pass a string:
+
+  # Show custom text to remote viewer
+  CGI::Alert::custom_browser_text << '-END-';
+  <h1>Yowzers!</h1>
+  <p>
+  We crashed with: <blink>[MSG]</blink>
+  </p>
+  -END-
+
+As above, C<[MSG]> (open bracket, upper-case MSG, close bracket)
+will be replaced with the die() text.
+
+Or, if you want fine-grain control, you can pass a CODE ref:
+
+  # Your function must take TWO arguments
+  sub my_text_func($$) {
+    my $msg = shift;                      # in: Perl error message
+    my $emit_http_headers = shift;        # in: Emit HTTP status?
+
+    if ($emit_http_headers) {
+      print  "Status: 500 Server Error\n"
+             "Content-type: text/html; charset=ISO-8859-1\n",
+             "\n";
+    }
+
+    if ($msg =~ /frobbledygrunt/) {
+      # ...do something special
+    }
+    else {
+      print "<h1>Ouch!</h1>\n",
+            "<p>Died with:</p>",
+            "<div class='foo'>",$msg,"</div>\n";
+    }
+
+    # Important!  Return 1, to tell CGI::Alert we were successful
+    return 1;
+  }
+
+  CGI::Alert::custom_browser_text \&my_text_func;
 
 =head2	See Also
 
