@@ -2,7 +2,7 @@
 #
 # CGI::Alert.pm  -  notify a human about errors/warnings in CGI scripts
 #
-# $Id: Alert.pm,v 1.21 2003/11/07 21:24:06 esm Exp $
+# $Id: Alert.pm,v 1.25 2004/03/05 21:39:04 esm Exp $
 #
 package CGI::Alert;
 
@@ -15,6 +15,10 @@ use Carp;
 
 # If set (by caller, via emit_http_headers), emit HTTP headers
 our $Emit_HTTP_Headers = 0;
+
+# If set (by caller, via emit_html_headers), _and_ CGI.pm is loaded,
+# emit these extra headers from http_die
+our @Extra_HTML_Headers;
 
 # By default, send notifications to this address.  We could try to be
 # clever about stat'ing the calling script and finding the owner, but
@@ -55,11 +59,15 @@ our $DEBUG_SENDMAIL = '';
 # END   user-configurable section
 ###############################################################################
 
+# One exportable (on request) function: http_die
+our @ISA         = qw(Exporter);
+our @EXPORT_OK   = qw(http_die);
+
 # Program name of our caller
 our $ME = $ENV{REQUEST_URI} || $0 || "<???>";
 
 # RCS ID, on one line for MakeMaker
-our $VERSION = '1.02';
+our $VERSION = '1.05';
 
 ############
 #  import  #  If called with "use CGI::Alert 'foo@bar'", send mail to foo@bar
@@ -68,7 +76,7 @@ sub import {
     my $i = 1;
     while ($i < @_) {
 	# Is it a valid exported function?  Skip.
-	if (exists &{$_[$i]}) {
+	if (defined &{$_[$i]}) {
 	    $i++
 	}
 	elsif ($_[$i] =~ m!^-{0,2}hide=(.+)$!) {	# RE to filter out?
@@ -92,15 +100,16 @@ sub import {
 	    splice @_, $i, 1;
 	}
 	else {
-	    # Anything else: must be an email address.  Point $Mainainer at it,
+	    # Anything else: must be an email address.  Point $Maintainer at it,
 	    # and remove from our arg list so Exporter doesn't see it.
 	    ($Maintainer) = splice @_, $i, 1;
 	    # (don't increment $i, since we've collapsed the array)
 	}
     }
 
-    # If we ever become an Exporter, un-comment this out
-#    CGI::Alert->export_to_level(1, @_);
+
+    # Anything left over?  E.g., 'http_die' ?  Pass it along to Exporter
+    CGI::Alert->export_to_level(1, @_);
 }
 
 ##################
@@ -290,7 +299,7 @@ sub notify($@) {
 	$cgi_script .= " v$main::VERSION"	if defined $main::VERSION;
 
 	print  SENDMAIL <<"-";
-From:    CGI Alert <nobody>
+From:    CGI Alert <nobody\@$http_host>
 To:      $Maintainer
 Subject: $subject in http://$http_host$request_uri
 X-mailer: $cgi_script, via $package v$VERSION
@@ -449,6 +458,65 @@ Content-Description: Included Headers
 
 # END   main notification function
 ###############################################################################
+# BEGIN auxiliary function for our caller to die _before_ emitting headers
+
+##############
+#  http_die  #  Called if we see an error _before_ emitting HTTP headers.
+##############
+sub http_die($@) {
+    my $status   = shift;		# Something like "400 Bad Request"
+    # Or maybe it's '--no-mail' ?  If so, $status is the next one
+    if ($status =~ /^--?no-?(mail|alert)$/) {
+	$SIG{__WARN__} = sub {
+	    printf STDERR "[%s - %s]: DIED: %s\n", $ME, scalar localtime, @_;
+	};
+	$status = shift;
+    }
+
+    # No reason for user to see the numeric code, it's just confusing.
+    (my $friendly_status = $status) =~ s/^\d+\s*//;
+
+    # This would best be done by CGI.pm, but we don't want the overhead.
+    my $start = <<"-";
+Status: $status
+Content-Type: text/html; charset=ISO-8859-1
+
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html
+        PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+ <title>$status</title>
+</head>
+-
+
+    if ($INC{'CGI.pm'}) {
+	$start = CGI::header(-status => $status)
+	       . CGI::start_html(-title => $status, @Extra_HTML_Headers);
+    }
+
+    print <<"-";
+$start
+
+<h1>$friendly_status</h1>
+<p />
+@_
+<p />
+<hr />
+-
+
+    # Emit a warning.  This goes to the logfile, but should also trigger
+    # an email to the code maintainer.
+    warn "Script error: $status\n"
+       . ": " . join("\n: ", @_);
+
+    exit 0;
+}
+
+
+# END   auxiliary function for our caller to die _before_ emitting headers
+###############################################################################
 # BEGIN compile-time execution
 #
 # This is evaluated the moment our caller does 'use CGI::Alert'.
@@ -589,6 +657,13 @@ sub emit_http_headers($) {
     $Emit_HTTP_Headers = 0 + $_[0];
 }
 
+########################
+#  extra_html_headers  #  Caller can give us stylesheets, etc
+########################
+sub extra_html_headers(@) {
+    @Extra_HTML_Headers = @_;
+}
+
 # END   caller-accessible functions (not yet exported)
 ###############################################################################
 
@@ -613,6 +688,19 @@ CGI::Alert - report CGI script errors to maintainer
 
 That's all.  Everything else is transparent to your script.
 
+Or:
+
+    use CGI::Alert qw(you@your.domain http_die);
+    ...
+    my $foo = param('foo')
+      or http_die '400 Bad Request', '<b>foo</b> param missing';
+
+The B<http_die> function provides a one-call mechanism for emitting
+an HTTP error status with a helpful message.  This is intended
+mostly for handling B<assert>-style situations: you want to make
+sure you don't continue past a bad point.
+
+
 =head1	DESCRIPTION
 
 CGI::Alert will inform you by email of warnings and errors (from B<die>
@@ -631,6 +719,12 @@ If the script terminates via B<die>, CGI::Alert sends you an email
 message with the details.  It also displays a big 'Uh-Oh' on the
 remote web user's browser, informing him/her that an error has
 occurred, and that the maintainer has been notified.
+
+CGI::Alert is useful for letting you know of problems in your
+scripts.  It's also useful for adding FIXMEs: you can leave
+unimportant-seeming sections unimplemented, but put a "warn"
+statement in them.  If you get email from that section, you
+know your users have a need for that functionality.
 
 =head2	Maintainer Address
 
@@ -723,6 +817,76 @@ red typeface, saying "Uh-Oh!".  The error will be displayed, along
 with a note saying that the maintainer has been notified by email.
 
 The remote (web) user is not informed of warnings.
+
+=head1	EXPORTABLE FUNCTIONS
+
+CGI::Alert provides one exportable function (not exported by default):
+
+=over 2
+
+=item *
+
+http_die ['--no-alert',] B<HTTP Status>, B<Blurb for User>
+
+B<http_die> provides a simple way for you to assert a
+condition and provide a safe way to handle assertion failure.
+
+For example, if your CGI script is guaranteed always to be called
+with the B<item_number> parameter set, you can write:
+
+    my $item = param('item_number')
+      or http_die '400 Bad Request','Missing item_number param';
+    $item =~ m!^([a-z][a-z0-9]+)$!
+      or http_die '400 Bad Request',"Bad item number '$item'";
+    $item = $1; # untaint.  We've validated that it's correct.
+
+    exists $Catalog{$item}
+      or http_die '--no-alert','404 Not Found',"$item: No such item";
+
+This lets you guard against people trying to sneak in with
+forged requests.  It also lets you check for "can't possibly
+happen" conditions in your code.  Not that these ever happen.
+
+http_die uses B<warn> on its input, to make sure it goes to the
+server log.  This means you also get email notification when it
+happens.  To prevent getting an email notification on common
+occurrences (such as the 404 above), use B<--no-alert> as the
+first argument to http_die.
+
+=head2	Custom Headers
+
+You want your error messages to conform to your site standards:
+stylesheets, etc.
+
+http_die() will use B<start_html> if CGI.pm is loaded.  You
+can pass extra arguments to start_html via B<extra_html_headers()> :
+
+    use CGI::Alert ('yourname', 'http_die');
+
+    # We issue these below, when we call start_html()
+    our @Common_Headers = (
+		-author  => 'esm@pobox.com',
+                -head    => Link({-rel  => 'shortcut icon',
+                                  -href => '/my.ico',
+                                  -type => 'image/x-icon',
+                                 }),
+		-style   => {
+			     -src  => '/my.css',
+                            },
+                          );
+
+    # If we ever call http_die(), make it use the above
+    CGI::Alert::extra_html_headers( @Common_Headers );
+
+
+=head2	See Also
+
+For a description of HTTP error status codes, see:
+
+  http://www.cis.ohio-state.edu/cgi-bin/rfc/rfc2616.html#sec-10.4
+
+=back
+
 
 =head1	REQUIREMENTS
 

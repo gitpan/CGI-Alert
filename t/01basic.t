@@ -69,7 +69,7 @@ unlink $script_path, $output_path;
 
 
 __END__
-From:    CGI Alert <nobody>
+From:    CGI Alert <nobody\@http-host-name>
 To:      nobody
 Subject: FATAL ERRORS in http://http-host-name/sample/url
 X-mailer: \S+, via CGI::Alert v\S+

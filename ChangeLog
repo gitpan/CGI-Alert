@@ -1,3 +1,14 @@
+2004-03-06  Eduardo Santiago <esm@pobox.com>
+	* Release 1.05
+
+2004-03-05  Eduardo Santiago <esm@pobox.com>
+	* Alert.pm: include $HTTP_HOST in email From: header, to
+	  help differentiate between virtual hosts
+
+2004-03-04  Eduardo Santiago <esm@pobox.com>
+	* Alert.pm: new exportable function http_die(), provides
+	  simple way for caller to emit an HTTP error (404, 500, ...)
+
 2003-11-07  Eduardo Santiago <esm@pobox.com>
 	* Release 1.02
 

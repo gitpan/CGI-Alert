@@ -5,3 +5,4 @@ README
 Alert.pm
 t/01basic.t
 t/02hide.t
+t/03http_die.t
