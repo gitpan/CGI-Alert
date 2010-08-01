@@ -2,7 +2,7 @@
 #
 # CGI::Alert.pm  -  notify a human about errors/warnings in CGI scripts
 #
-# $Id: Alert.pm,v 1.31 2004/12/13 22:59:44 esm Exp $
+# $Id: 67 $
 #
 package CGI::Alert;
 
@@ -35,13 +35,13 @@ our @Hide = (qr/(^|[\b_-])passw/i);
 our $Browser_Text = <<'-';
 <h1><font color="red">Uh-Oh!</font></h1>
 <p>
-The script which was handling your request died, with the following error:
+The script handling your request died with the following error:
 </p>
 <pre>
     [MSG]
 </pre>
 <p>
-If that indicates a problem which you can fix, please do so.
+If that indicates a problem you can fix, please do so.
 </p>
 <p>
 Otherwise, don't panic: I have sent a notification to the
@@ -87,7 +87,7 @@ our @EXPORT_OK   = qw(http_die);
 our $ME = $ENV{REQUEST_URI} || $0 || "<???>";
 
 # RCS ID, on one line for MakeMaker
-our $VERSION = '1.08';
+use version 0.77; our $VERSION = version->declare('v2.0.0');
 
 ############
 #  import  #  If called with "use CGI::Alert 'foo@bar'", send mail to foo@bar
@@ -120,8 +120,8 @@ sub import {
 	    splice @_, $i, 1;
 	}
 	else {
-	    # Anything else: must be an email address.  Point $Maintainer at it,
-	    # and remove from our arg list so Exporter doesn't see it.
+	    # Anything else: must be an email address.  Point $Maintainer
+	    # at it, and remove from our arg list so Exporter doesn't see it.
 	    ($Maintainer) = splice @_, $i, 1;
 	    # (don't increment $i, since we've collapsed the array)
 	}
@@ -143,7 +143,10 @@ sub import {
 INIT {
     # Invoked from user URL (~user/...) ?  Debugging -- send mail to him/her
     if (($ENV{REQUEST_URI} || "") =~ m!/(~|%7e)([^/]+)/!i) {
-	$Maintainer = $2;
+	# Does user actually exist?
+	if (getpwnam($2)) {
+	    $Maintainer = $2;
+	}
     }
 
     # If called with CGI parameters, remember them now.  Otherwise, our
@@ -321,12 +324,19 @@ sub notify($@) {
 	exists $env{REMOTE_USER} && $env{REMOTE_USER}
 	  and print SENDMAIL "Reply-To: $env{REMOTE_USER}\n";
 
+	# Even though the subject distinguishes between errors and warnings,
+	# it can be helpful to scan based on 'From' line as well.  Plus,
+	# Ed's mail-announce speech synthesizer will then differentiate them
+	my $from = "CGI " . ($subject =~ /warn/i
+			     ? "Warnings"
+			     : "Errors");
+
 	# Include CGI script name and version (if known) in X-mailer
 	my $cgi_script = _basename($0);
 	$cgi_script .= " v$main::VERSION"	if defined $main::VERSION;
 
 	print  SENDMAIL <<"-";
-From:    CGI Alert <nobody$at_http_host>
+From:    $from <nobody$at_http_host>
 To:      $Maintainer
 Subject: $subject in http://$http_host_full$request_uri
 X-mailer: $cgi_script, via $package v$VERSION

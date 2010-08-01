@@ -1,4 +1,4 @@
-CGI::Alert version 1.08
+CGI::Alert version v2.0.0
 =======================
 
 CGI::Alert notifies a developer of problems in a CGI script.
@@ -31,7 +31,7 @@ CGI::Alert requires a working /usr/sbin/sendmail or /usr/lib/sendmail.
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2003,2004 Eduardo Santiago
+Copyright (C) 2003-2010 Eduardo Santiago
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,8 +1,10 @@
+Build.PL
 ChangeLog
 Makefile.PL
 MANIFEST
 README
-Alert.pm
+lib/CGI/Alert.pm
 t/01basic.t
 t/02hide.t
 t/03http_die.t
+META.yml                                 Module meta-data (added by MakeMaker)

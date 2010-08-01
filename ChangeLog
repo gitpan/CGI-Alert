@@ -1,3 +1,10 @@
+2010-08-01  Eduardo Santiago <esm@cpan.org>
+	* Release v2.0.0
+
+	* No actual changes; just moved Alert.pm into lib/CGI to
+	  conform to best practices, and got the test suite working
+	  without relying on internals of CGI.pm.
+
 2004-12-13  Eduardo Santiago  <esm@ascend.gingerbear.org>
 
 	* Release 1.08

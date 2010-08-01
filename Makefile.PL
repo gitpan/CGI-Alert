@@ -3,13 +3,15 @@ use ExtUtils::MakeMaker;
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
 WriteMakefile(
-    'NAME'		=> 'CGI::Alert',
-    'VERSION_FROM'	=> 'Alert.pm', # finds $VERSION
-    'PREREQ_PM'		=> {}, # e.g., Module::Name => 1.1
+    'NAME'              => 'CGI::Alert',
+    'AUTHOR'            => 'Eduardo Santiago <esm@cpan.org>',
+    'VERSION_FROM'      => 'lib/CGI/Alert.pm', # finds $VERSION
+    'ABSTRACT_FROM'     => 'lib/CGI/Alert.pm', # retrieve abstract from module
 
-    'ABSTRACT_FROM'     => 'Alert.pm', # retrieve abstract from module
-    'AUTHOR'            => 'Eduardo Santiago <esm@pobox.com>',
-
+    'PREREQ_PM'         => {
+        'Test::More' => 0,
+        'version'    => '0.77',
+    },
     # (only for use by Ed): README is generated from README.in, so I don't
     # have to maintain the version in two places.  Make sure README is
     # up-to-date before we ship it.
@@ -19,7 +21,7 @@ WriteMakefile(
 sub MY::postamble {
     return <<'-';
 README:	README.in Makefile
-	sed -e "s/__VERSION__/$(VERSION)/" <$< >$@.tmp.$$ && mv -f $@.tmp.$$ $@
+	sed -e "s/__VERSION__/$(VERSION)/" -e "s/<YYYY>/$(shell date +%Y)/" <$< >$@.tmp.$$ && mv -f $@.tmp.$$ $@
 
 -
 }

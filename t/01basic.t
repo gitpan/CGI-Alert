@@ -2,12 +2,12 @@
 #
 
 use Test::More;
-use File::Temp	'tmpnam';
+use File::Temp	'tempfile';
 
 umask 077;
 
-my ($script_fh, $script_path) = tmpnam;
-my $output_path               = tmpnam;
+my ($script_fh, $script_path) = tempfile( "CGI-Alert-t-01.script.XXXXXX" );
+my (undef,      $output_path) = tempfile( "CGI-Alert-t-01.output.XXXXXX" );
 
 printf $script_fh <<'-', $^X, $output_path;
 #!%s -Tw -Iblib/lib
@@ -42,7 +42,7 @@ plan tests => 1 + @expect;
        REQUEST_URI    => '/sample/url',
       );
 
-    system $script_path, 'arg1=val1', 'arg2=val2.1', 'arg2=val2.2';
+    system "./$script_path", 'arg1=val1', 'arg2=val2.1', 'arg2=val2.2';
 }
 
 is $?, 0, 'exit code of sample script';
@@ -69,7 +69,7 @@ unlink $script_path, $output_path;
 
 
 __END__
-From:    CGI Alert <nobody\@http-host-name>
+From:    CGI Errors <nobody\@http-host-name>
 To:      nobody
 Subject: FATAL ERRORS in http://http-host-name/sample/url
 X-mailer: \S+, via CGI::Alert v\S+
