@@ -10,7 +10,7 @@ WriteMakefile(
 
     'PREREQ_PM'         => {
         'Test::More' => 0,
-        'version'    => '0.77',
+        'Test::Differences' => 0,
     },
     # (only for use by Ed): README is generated from README.in, so I don't
     # have to maintain the version in two places.  Make sure README is

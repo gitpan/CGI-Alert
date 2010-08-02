@@ -9,7 +9,7 @@ my $builder = Module::Build->new(
     dist_version_from   => 'lib/CGI/Alert.pm',
     requires => {
         'Test::More' => 0,
-        'version'    => 'v0.77',
+        'Test::Differences' => 0,
     },
     add_to_cleanup      => [ 'CGI-Alert-*' ],
 );
