@@ -2,7 +2,7 @@
 #
 # CGI::Alert.pm  -  notify a human about errors/warnings in CGI scripts
 #
-# $Id: 79 $
+# $Id: 80 $
 #
 package CGI::Alert;
 
@@ -87,7 +87,7 @@ our @EXPORT_OK   = qw(http_die);
 our $ME = $ENV{REQUEST_URI} || $0 || "<???>";
 
 # Module version, on one line for MakeMaker
-our $VERSION = 2.01;
+our $VERSION = 2.02;
 
 ############
 #  import  #  If called with "use CGI::Alert 'foo@bar'", send mail to foo@bar
