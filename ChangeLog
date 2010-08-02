@@ -1,3 +1,8 @@
+2010-08-02  Eduardo Santiago <esm@cpan.org>
+	* Release 2.03
+
+	* Test suite changes for new perl5.10 warning behavior.
+
 2010-08-01  Eduardo Santiago <esm@cpan.org>
 	* Release 2.02
 

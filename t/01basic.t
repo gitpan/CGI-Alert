@@ -96,7 +96,7 @@ In addition, the following warnings were detected:
 
   \* this is warning number 1
 
-  \* Use of uninitialized value in print at \S+ line 10.
+  \* Use of uninitialized value(\s\$\S+)? in print at \S+ line 10.
 
 
 
@@ -128,8 +128,8 @@ Content-Description: Warnings, with Stack Traces
   \S+ :    8    warn\( "this is warning number 1\\n" \)
 
 
-  \* Use of uninitialized value in print at \S+ line 10.
-  \S+ :   10    warn\( "Use of uninitialized value in print at \S+ line 10.\\n" \)
+  \* Use of uninitialized value(\s\$\S+)? in print at \S+ line 10.
+  \S+ :   10    warn\( "Use of uninitialized value(\s\$\S+)? in print at \S+ line 10.\\n" \)
 
 
 
