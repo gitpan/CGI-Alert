@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               CGI-Alert
-version:            2.04
+version:            2.05
 abstract:           report CGI script errors to maintainer
 author:
     - Eduardo Santiago <esm@cpan.org>

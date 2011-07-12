@@ -20,7 +20,7 @@ our %tests =
    'hide=^passw'	=> '(?^:^passw)',
    '-hide=^passw'	=> '(?^:^passw)',
 
-   'hide=qr/^passw/i'	=> '(?^:^passw)',
+   'hide=qr/^passw/i'	=> '(?^i:^passw)',
    'hide=/^aaa(/'	=> 'err:Unmatched \( in regex; marked by <-- HERE',
   );
 
@@ -71,7 +71,7 @@ for my $t (sort keys %tests) {
         #
         # To deal with both, we transform old-style to new.
         my $got = $CGI::Alert::Hide[0];
-        $got =~ s{^\(\?[a-z-]+:}{(?^:};
+        $got =~ s{^\(\?(.*)-[a-z]+:}{(?^$1:};
 
 	is $got, $expect, "$t (2: results)";
     }
