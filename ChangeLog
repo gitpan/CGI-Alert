@@ -1,3 +1,9 @@
+2011-07-12  Eduardo Santiago <esm@cpan.org>
+	* Release 2.04
+
+	* Bug 62263: test suite changes to handle new perl5.14
+	  regex compilation
+
 2010-08-02  Eduardo Santiago <esm@cpan.org>
 	* Release 2.03
 

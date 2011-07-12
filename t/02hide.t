@@ -15,12 +15,12 @@ $SIG{__WARN__} = 'DEFAULT';
 #
 our %tests =
   (
-   'hide=/^passw/'	=> '(?-xism:^passw)',
-   'hide=m!^passw!'	=> '(?-xism:^passw)',
-   'hide=^passw'	=> '(?-xism:^passw)',
-   '-hide=^passw'	=> '(?-xism:^passw)',
+   'hide=/^passw/'	=> '(?^:^passw)',       # Note: new >=5.14 regexs
+   'hide=m!^passw!'	=> '(?^:^passw)',
+   'hide=^passw'	=> '(?^:^passw)',
+   '-hide=^passw'	=> '(?^:^passw)',
 
-   'hide=qr/^passw/i'	=> '(?i-xsm:^passw)',
+   'hide=qr/^passw/i'	=> '(?^:^passw)',
    'hide=/^aaa(/'	=> 'err:Unmatched \( in regex; marked by <-- HERE',
   );
 
@@ -62,8 +62,18 @@ for my $t (sort keys %tests) {
 	    fail "$t (1: did not parse: @warnings)";
 	}
 
-	# Make sure the compiled RE matches what we expect
-	is $CGI::Alert::Hide[0], $expect, "$t (2: results)";
+	# Make sure the compiled RE matches what we expect.
+        # Note the regex transformation hackery: perl 5.14 changed the
+        # string representation of compiled regexps:
+        #
+        #    perl <  5.14  : (?-xism:foo)
+        #    perl >= 5.14  : (?^:foo)
+        #
+        # To deal with both, we transform old-style to new.
+        my $got = $CGI::Alert::Hide[0];
+        $got =~ s{^\(\?[a-z-]+:}{(?^:};
+
+	is $got, $expect, "$t (2: results)";
     }
 }
 
