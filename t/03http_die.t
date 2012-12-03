@@ -42,10 +42,6 @@ open STDOUT, '>', '%s'
 
 CGI::Alert::extra_html_headers(
 		-author  => 'esm@cpan.org',
-                -head    => CGI::Link({-rel  => 'shortcut icon',
-                                  -href => '/foo.ico',
-                                  -type => 'image/x-icon',
-                                 }),
 		-style   => {
 			     -src  => '/foo.css',
 			    },
@@ -104,8 +100,6 @@ $VAR1 = [
           '400 Bad Request',
           '-author',
           'esm@cpan.org',
-          '-head',
-          '<link type="image/x-icon" rel="shortcut icon" href="/foo.ico" />',
           '-style',
           {
             '-src' => '/foo.css'

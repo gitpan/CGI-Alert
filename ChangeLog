@@ -1,3 +1,9 @@
+2012-12-03  Eduardo Santiago <esm@cpan.org>
+	* Release 2.06
+
+	* Bug 81602: test suite changes to handle new perl5.17
+	  hash key randomization
+
 2011-07-12  Eduardo Santiago <esm@cpan.org>
 	* Release 2.05
 
