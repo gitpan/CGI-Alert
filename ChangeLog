@@ -1,3 +1,9 @@
+2012-02-12  Eduardo Santiago <esm@cpan.org>
+	* Release 2.07
+	* Bug 83283: don't use expensive $` and $'
+	* Bug 28111: add LICENSE, and META.yml
+	* Disable on Windows
+
 2012-12-03  Eduardo Santiago <esm@cpan.org>
 	* Release 2.06
 

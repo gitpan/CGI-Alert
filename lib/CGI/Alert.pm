@@ -2,7 +2,7 @@
 #
 # CGI::Alert.pm  -  notify a human about errors/warnings in CGI scripts
 #
-# $Id: 87 $
+# $Id: 91 $
 #
 package CGI::Alert;
 
@@ -87,7 +87,7 @@ our @EXPORT_OK   = qw(http_die);
 our $ME = $ENV{REQUEST_URI} || $0 || "<???>";
 
 # Module version, on one line for MakeMaker
-our $VERSION = 2.06;
+our $VERSION = 2.07;
 
 ############
 #  import  #  If called with "use CGI::Alert 'foo@bar'", send mail to foo@bar
@@ -271,9 +271,8 @@ sub maintainer() {
     my $just_mail = $Maintainer;
 
     # Address is of the form "Foo Bar <fubar@some.where>" ?
-    if ($just_mail =~ /\s*<(.*)>\s*/) {
-	$real_name = "<b>$`$'</b> ";
-	$just_mail = $1;
+    if ($just_mail =~ s/^(.*)<(.*)>(.*)$/$2/) {
+	$real_name = "<b>$1 $3</b> ";
     }
     $real_name =~ s|\s+|&nbsp;|g;
 
