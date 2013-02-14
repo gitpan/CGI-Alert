@@ -20,4 +20,4 @@ no_index:
 requires:
   Test::Differences: 0
   Test::More: 0
-version: 2.07
+version: 2.08

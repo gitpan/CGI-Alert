@@ -2,6 +2,10 @@ use strict;
 use warnings;
 use Module::Build;
 
+# Selftests on cpantesters.org consistently fail on Windows. I don't have
+# access to Windows, and don't really care enough to pursue this.
+die "OS unsupported"            if $^O =~ /mswin/i;
+
 my $builder = Module::Build->new(
     module_name         => 'CGI::Alert',
     license             => 'perl',
