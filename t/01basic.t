@@ -27,7 +27,7 @@ die "this is where we die\n";
 
 close $script_fh;
 
-chmod 500 => $script_path;
+chmod 0500 => $script_path;
 
 my @expect = <DATA>;
 

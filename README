@@ -1,4 +1,4 @@
-CGI::Alert version 2.07
+CGI::Alert version 2.08
 =======================
 
 CGI::Alert notifies a developer of problems in a CGI script.

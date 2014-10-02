@@ -17,7 +17,6 @@ printf $script_fh <<'-', $^X, $output_path, $output_path;
 #!%s -Tw -Iblib/lib
 
 use CGI::Alert		qw(nobody http_die);
-use CGI;
 
 # Not interested in any email being sent
 $SIG{__DIE__}  = 'DEFAULT';
@@ -36,6 +35,9 @@ package main;
     print "start_html()\n";
     use Data::Dumper; print Dumper(\@_);
 };
+
+# Pretend that we've loaded CGI module
+$INC{'CGI.pm'} = 'HACK ALERT';
 
 open STDOUT, '>', '%s'
   or die "Cannot create %s: $!\n";
